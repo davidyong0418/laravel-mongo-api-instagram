@@ -1,0 +1,1 @@
+{"name":"screencapture-localhost-admin-proposals-2018-08-16-04_19_07.png","type":"image\/png","tmp_name":"C:\\xampp\\tmp\\phpD7CE.tmp","error":0,"size":164453}

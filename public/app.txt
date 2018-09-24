@@ -1,0 +1,1 @@
+{"\u0000Symfony\\Component\\HttpFoundation\\File\\UploadedFile\u0000test":false,"\u0000Symfony\\Component\\HttpFoundation\\File\\UploadedFile\u0000originalName":"IMG_0007.PNG","\u0000Symfony\\Component\\HttpFoundation\\File\\UploadedFile\u0000mimeType":"image\/jpeg","\u0000Symfony\\Component\\HttpFoundation\\File\\UploadedFile\u0000error":0,"\u0000*\u0000hashName":null}
