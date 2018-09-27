@@ -85,7 +85,7 @@ class UserController extends Controller
                 $data_info['first_name'] = $first_name;
                 $data_info['last_name'] = $last_name;
                 $user = new User();
-                $expire_date = date('Y-m-d', strtotime(date('Y-m-d'). ' + 15 days'));
+                $expire_date = date('Y-m-d H:i:s', strtotime(date('Y-m-d H:i:s'). ' + 3 minutes'));
                 $user->expire_date = $expire_date;
                 $user->first_name = $first_name;
                 $user->last_name = $last_name;
@@ -301,14 +301,18 @@ class UserController extends Controller
                                 'postDataiphonethumbnail'=>'$iphone_thmubnail',
                                 'postDataipadthumbnail'=>'$ipad_thmubnail',
                                 'postDataandroidthumbnail'=>'$android_thmubnail',
-                                'postDataCategory'=>'$category', 
+                                'postDataCategory'=>'$category',
+                                'postDataLikeCount' => 1,
+                                'postDataContent' => 1,
+                                'created_at' => 1
                         ]
                     ],
                     [
                         '$sort' => [
-                            'postDataLikeCount' => -1
+                            'postDataLikeCount' => -1,
+                            'created_at' => -1
                         ]
-                        ],
+                    ],
                     [
                         '$limit'=>9
                     ]
@@ -320,14 +324,19 @@ class UserController extends Controller
             $after = $request->get('after');
             $after_info = Media::where('_id', $after)->get()->toArray();
             $postDataLikeCount =$after_info[0]['postDataLikeCount'];
-            $postdata = Media::raw(function($collection) use($selected_uid, $postDataLikeCount){
+            $created_at =$after_info[0]['created_at'];
+            $date = new UTCDateTime(new DateTime($created_at));
+            $postdata = Media::raw(function($collection) use($selected_uid, $postDataLikeCount, $date){
                 return $collection->aggregate([
                     [
                         '$match' => [
                             'postUserId' => $selected_uid,
                             'postDataLikeCount'=>[
-                                '$gt'=> $postDataLikeCount
+                                '$lte'=> $postDataLikeCount
                             ],
+                            'created_at' => [
+                                '$lt' => $date
+                                ],
                             'status'=> 2,
                         ]
                     ],
@@ -339,11 +348,15 @@ class UserController extends Controller
                                 'postDataipadthumbnail'=>'$ipad_thmubnail',
                                 'postDataandroidthumbnail'=>'$android_thmubnail',
                                 'postDataCategory'=>'$category', 
+                                'postDataLikeCount' => 1,
+                                'created_at' => 1,
+                                'postDataContent' => 1,
                         ]
                     ],
                     [
                         '$sort' => [
-                            'postDataLikeCount' => -1
+                            'postDataLikeCount' => -1,
+                            'created_at' => -1
                         ]
                     ],
                     [
@@ -454,6 +467,7 @@ class UserController extends Controller
                                 'postDataipadthumbnail'=>'$ipad_thmubnail',
                                 'postDataandroidthumbnail'=>'$android_thmubnail',
                                 'postDataCategory'=>'$category', 
+                                'created_at' => 1
                         ]
                     ],
                      [
@@ -492,6 +506,7 @@ class UserController extends Controller
                                 'postDataipadthumbnail'=>'$ipad_thmubnail',
                                 'postDataandroidthumbnail'=>'$android_thmubnail',
                                 'postDataCategory'=>'$category', 
+                                'created_at' => 1
                         ]
                     ],
                      [
@@ -576,7 +591,7 @@ class UserController extends Controller
             $login = User::where('username', '=', $identify)->where('password', '=', $password)->get()->toArray();
         }
         if(!empty($login)){
-           
+           	
             if($login[0]['confirmed'] == 0){
                 $data = array(
                     'action' =>'false',
@@ -584,6 +599,12 @@ class UserController extends Controller
                 );
             }
             else{
+            	$update_date = date('Y-m-d H:i:s', strtotime(date('Y-m-d H:i:s'). ' + 3 minutes'));
+            	$update_data = array(
+                    'expire_date' => $update_date
+                );
+                DB::collection('User')->where('_id', $login[0]['_id'])->update($update_data);
+
                 $data = array(
                     'action' =>'true',
                     'result' => $login[0]
@@ -1025,9 +1046,10 @@ class UserController extends Controller
                                         ]
                                 ],
                                 'result'=>[
-                                    '$filter' => ['input'=>'$like_users',
+                                    '$filter' => [
+                                        'input'=>'$like_users',
                                     'as' => 'user_item',
-                                    'cond' => [ '$eq'=> [ '$$user_item.uid', $uid ] ]
+                                    'cond' => [ '$eq'=> [ '$$usre_item.uid', $uid ] ]
                                     ]
                                 ]
                         ]
@@ -1054,9 +1076,6 @@ class UserController extends Controller
                         '$addFields' => [
                             'postUserFollowingCount' => '$postUserinfo.following_count',
                         ]
-                    ],
-                    [
-                        '$unwind' => '$result'
                     ],
                     [ '$limit' => 9 ]
                 ]);
@@ -1167,20 +1186,21 @@ class UserController extends Controller
     public function token_auth(Request $request)
     {
         $token = $request->get('token');
+        // 1537801500
         $token_result = User::where('_token', $token)->get()->toArray();
-        if(!empty($token_result))
+        if(!empty($token_result) && $token_result[0]['confirmed'] == 1)
         {
             $expire_date = strtotime($token_result[0]['expire_date']);
-            $today = strtotime(date('Y-md-d'));
+            $today = strtotime(date('Y-m-d H:i:s'));
             if($expire_date >= $today)
             {
                 $data = array(
                     'action' => 'true',
                     'result' => $token_result
                 );
-                $update_date = date('Y-m-d', strtotime(date('Y-m-d'). ' + 15 days'));
+                $expire_date = date('Y-m-d H:i:s', strtotime(date('Y-m-d H:i:s'). ' + 3 minutes'));
                 $update_data = array(
-                    'expire_date' => $update_date
+                    'expire_date' => $expire_date
                 );
                 DB::collection('User')->where('_token', $token)->update($update_data);
             }
@@ -1194,7 +1214,7 @@ class UserController extends Controller
         else{
             $data = array(
                 'action' => 'false',
-                'result' => 'No register'
+                'result' => 'No register or confirm was not'
             );
         }
         return $data;

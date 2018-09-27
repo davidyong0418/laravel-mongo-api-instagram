@@ -59,7 +59,7 @@ class PostController extends Controller
                         ]],
                         [
                             '$match' => [
-                                'status' => 1
+                                'status' => 2
                             ]
                         ],
                         [
@@ -413,9 +413,10 @@ class PostController extends Controller
         }
         $send_info = array();
         $following_info = Following::where('uid',$uid)->get()->toArray();
+
         foreach ($data as $key => $item)
         {
-            $data[$key]['postUserFollowState'] = false;
+             $data[$key]['postUserFollowState'] = false;
             if(!empty($following_info))
             {
                 foreach($following_info[0]['following_users'] as $following_user)
@@ -429,21 +430,25 @@ class PostController extends Controller
             
         }
         $send_info['data']['children'] = $data;
-        
         if(!empty($data))
         {
+
             if(count($data) == 9)
             {
                 $send_info['data']['after'] = $data[8]['_id'];
+            	$send_info['action'] = 'true';
+
             }
             else{
                 $send_info['data']['after'] = 'end';
+            	$send_info['action'] = 'true';
+
             }
-            $send_info['action'] = 'true';
             
         }
         else{
-            $send_info['action'] = 'false';
+            $send_info['action'] = 'true';
+            $send_info['data']['after']  = 'end';
         }
         
         return response()->json($send_info);

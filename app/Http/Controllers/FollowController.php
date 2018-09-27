@@ -126,7 +126,7 @@ class FollowController extends Controller
             );
         }
         else{
-            Following::raw()->findOneAndUpdate(['uid'=> $uid], ['$pull'=> ['following_users'=> ['_id'=> $following_id, 'string_id' => $following_id]]]);
+            Following::raw()->findOneAndUpdate(['uid'=> $uid], ['$pull'=> ['following_users'=> ['_id'=> new ObjectID($following_id), 'string_id' => $following_id]]]);
             Following::where('uid', $uid)->increment('count', -1);
             User::where('_id', $uid)->increment('following_count', -1);
             $data = array(
