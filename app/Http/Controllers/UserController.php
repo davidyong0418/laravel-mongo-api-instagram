@@ -130,7 +130,7 @@ class UserController extends Controller
             return $data;
             }
         }
-        else
+        else if ($type == 'phone')
         {
             $check_username = User::where('username', '=', $username)->get()->toArray();
             $check_phonenumber = User::where('phone_number', '=', $phone_number)->get()->toArray();
@@ -186,6 +186,69 @@ class UserController extends Controller
                 'confirmation' => $data_info['confirmation']
             );
             return $data;
+            }
+        }
+        else if($type == 'facebook')
+        {
+            $check_username = User::where('username', '=', $username)->get()->toArray();
+            $check_email = User::where('email', '=', $email)->get()->toArray();
+            if(!empty($check_username) || !empty($check_email)){
+                if(!empty($check_username)){
+                    $data = array(
+                        'action' =>'false',
+                        'result' => 'username existed'
+                    );
+                    return $data;
+                }
+                if(!empty($check_email)){
+                    $data = array(
+                        'action' =>'false',
+                        'result' => 'email existed'
+                    );
+                    return $data;
+                }
+            }
+            else{
+                $input = $request->all();
+                $_token = str_random(25);
+                $digits = 4;
+                
+                $data_info['confirmation'] = str_pad(rand(0, pow(10, $digits)-1), $digits, '0', STR_PAD_LEFT);
+                $data_info['email'] = $email;
+                if($this->valid_email($email) != true)
+                {
+                    $data = array(
+                        'action'=> 'false',
+                        'result'=> 'invalid email'
+                    );
+                    return $data;
+                }
+                
+                $data_info['first_name'] = $first_name;
+                $data_info['last_name'] = $last_name;
+                $user = new User();
+                $expire_date = date('Y-m-d H:i:s', strtotime(date('Y-m-d H:i:s'). ' + 3 minutes'));
+                $user->expire_date = $expire_date;
+                $user->first_name = $first_name;
+                $user->last_name = $last_name;
+                $user->username = $username;
+                $user->email = $email;       
+                $user->password = $password;
+                $user->profile_pic_url = 'https://www.sparklabs.com/forum/styles/comboot/theme/images/default_avatar.jpg';
+                $user->profile_pic_thumbnail = 'https://www.sparklabs.com/forum/styles/comboot/theme/images/default_avatar.jpg';
+                $user->_token = $_token;
+                $user->confirmed = 1;
+                $user->confirm_str = $data_info['confirmation'];
+                $user->following_count = 0;
+                $user->postDatacount = 0;
+                $user->followers_count = 0;
+                $user->save();
+                $data = array(
+                    'action' =>'true',
+                    'result' => $user->toArray(),
+                    'confirmation' => $data_info['confirmation']
+                );
+            return response()->json($data);
             }
         }
         
@@ -648,11 +711,28 @@ class UserController extends Controller
     {
         $user_id = $request->get('user_id');
         $email = $request->get('email');
+        $email = strtolower($email);
         $check = $this->valid_email($email);
         if($check == true)
         {
-            $user = User::where('email', $email)->first();
-       
+            // $user = User::where('email', $email)->first();
+            $user = User::raw(function($collection) use($email)
+                {
+                    return $collection->aggregate([
+                        [
+                            '$project'=>[
+                                'lower_email'=> [ '$toLower' => '$email' ],
+                                'username' => 1,
+                                'email' => 1,
+                            ]
+                        ],
+                        [
+                            '$match' => [
+                                'lower_email'=> $email
+                            ]
+                        ]
+                    ]);
+                })->toArray();
             if(empty($user)){
                 $data = array(
                     'action' =>'false',
@@ -665,9 +745,10 @@ class UserController extends Controller
             $data = array(
                 'password' =>$new_password
             );
+            $email = $user[0]['email'];
             DB::collection('User')->where('email', $email)->update($data);
-            $data_info['username'] = $user->username;
-            $data_info['email'] = $user->email;
+            $data_info['username'] = $user[0]['username'];
+            $data_info['email'] = $user[0]['email'];
             $data_info['new_password'] = $new_password;
 
             $m = new SimpleEmailServiceMessage();
@@ -857,22 +938,7 @@ class UserController extends Controller
     }
    
     // api/facebook_login?user_id=&password=&email=
-    public function facebook_login(Request $request)
-    {
-        $uid = $request->get('user_id');
-        $facebook_password = $request->get('password');
-        $facebook_email = $request->get('email');
-        $user = User::find($uid);
-        $user->facebook_password = $facebook_password;
-        $user->facebook_email =$facebook_email;
-        $user->save();
-        $data = array(
-            'action' =>'true',
-            'result'=>$user->toArray()
-        );
-        return $data;
-
-    }
+   
     
     public function register_confirm(Request $request)
     {
@@ -1219,5 +1285,24 @@ class UserController extends Controller
         }
         return $data;
     }
+    public function facebook_login(Request $request)
+    {
+        $uid = $request->get('user_id');
+        $facebook_password = $request->get('password');
+        $facebook_email = $request->get('email');
+        $user = User::find($uid);
+        $user->facebook_password = $facebook_password;
+        $user->facebook_email =$facebook_email;
+        $user->save();
+        $data = array(
+            'action' =>'true',
+            'result'=>$user->toArray()
+        );
+        return $data;
 
+    }
+    public function facebook_register(Request $request)
+    {
+        $uid = $request->get('user_id');
+    }
 }

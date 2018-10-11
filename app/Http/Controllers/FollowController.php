@@ -21,7 +21,7 @@ class FollowController extends Controller
                     '$match'=>[
                         '$expr'=>[
                             '$eq'=>[
-                                '$status', 1
+                                '$status', 2
                             ]
                         ]
                     ]
