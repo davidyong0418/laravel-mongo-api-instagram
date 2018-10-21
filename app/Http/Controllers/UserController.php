@@ -833,11 +833,21 @@ class UserController extends Controller
         );
         User::where('_id', $user_id)->update($update_data);
         $user = User::where('_id',$user_id)->get()->toArray();
-        $data=array(
-            'action' => 'true',
-            'result'=> $user[0]
-        );
-        return response()->josn($data);
+        if(empty($user))
+        {
+            $data=array(
+                'action' => 'false',
+                'result'=>'No user'
+            );
+        }
+        else{
+            $data=array(
+                'action' => 'true',
+                'result'=> $user[0]
+            );
+        }
+        
+        return response()->json($data);
 
     }
     // api/all_users?user_id
@@ -888,6 +898,8 @@ class UserController extends Controller
         $media_id = $request->get('media_id');
         $like_state = $request->get('like_state');
         $Media = new Media();
+        $today = date('Y-m-d h:i:s');
+        $postdatalikecomment_date = new UTCDateTime(new DateTime($today));
         if($like_state == 1)
         {
             $Media->update_post($media_id, 'like');
@@ -897,13 +909,16 @@ class UserController extends Controller
             Media::where('_id', $media_id)->push('postdatalikecomment', array(
                     'uid' => $uid,
                     'object_uid' => new ObjectID($uid),
-                    'type' =>'like'
+                    'type' =>'like',
+                    'created_at'=>$postdatalikecomment_date,
+                    'comment'=>''
                     ));
         }
         else{
             $object_id = new ObjectID($media_id);
             Media::raw()->findOneAndUpdate(['_id'=> $object_id], ['$pull'=> ['like_users'=> ['uid'=> $uid]]]);
-            Media::raw()->findOneAndUpdate(['_id'=> $object_id], ['$pull'=> ['postdatalikecomment'=> ['uid'=> $uid, 'type'=>'like','object_uid' => new ObjectID($uid)]]]);
+            Media::raw()->findOneAndUpdate(['_id'=> $object_id], ['$pull'=> ['postdatalikecomment'=> ['uid'=> $uid, 'type'=>'like','object_uid' => new ObjectID($uid), 
+            'comment'=>'']]]);
             $Media->update_post($media_id, 'unlike');
         }
         $data = array(
@@ -1184,67 +1199,151 @@ class UserController extends Controller
     public function get_feed_posts(Request $request)
     {
         $uid = $request->get('user_id');
-        $data = Media::raw(function($collection) use($uid)
+        $date = date('Y-m-d h:i:m');
+        $now = new UTCDateTime(new DateTime($date));
+        $data = Media::raw(function($collection) use($uid,$now)
         {
             return $collection->aggregate([
-                [
-                    '$match' => [
-                        'postUserId'=> $uid,
+    			[
+                    '$match'=>[
+                        'postUserId'=>'5bc58d42871b1e28dd572022'
                     ]
                 ],
                 [
-                    '$unwind'=> '$postdatalikecomment'
+                    '$unwind'=>'$postdatalikecomment'
                 ],
                 [
-                    '$group' => [
-                        '_id' =>'$postdatalikecomment.uid',
-                        'object_uid' =>[
-                                        '$first' => '$postdatalikecomment.object_uid'
-                                    ],
-                        'count' => [
-                            '$sum' => 1
-                            
-                        ]
-                        
+                     '$lookup'=>
+                   [
+                     'from'=> 'User',
+                     'localField'=> 'postdatalikecomment.object_uid',
+                     'foreignField'=> '_id',
+                     'as'=> 'postUserinfo'
+                   ]
+                ],
+                [
+                    '$unwind'=>'$postUserinfo'
+                ],
+                
+                [
+                    '$addFields'=>
+                    [
+                        'profile_pic_thumbnail'=>'$postUserinfo.profile_pic_thumbnail',
+                        'username'=>'$postUserinfo.username',
+                        'user_id'=>['$toString'=>'$postUserinfo._id'],
+                        'type'=>'$postdatalikecomment.type',
+                        'comment'=>'$postdatalikecomment.comment',
+                        'created'=>'$postdatalikecomment.created_at'
+            
                     ]
-                
                 ],
+                
                 [
-                    '$lookup' =>[
-                        'from' => 'User',
-                        'localField' => 'object_uid',
-                        'foreignField' => '_id',
-                        'as' => 'user_info'
+                    '$project'=>[
+                        'follow_count'=>0,
+                        'category'=>0,
+                        'postDataCaption'=>0,
+                        'postDataLastCommentUserID'=>0,
+                        'postDataLastCommentText'=>0,
+                        'postDataShareCount'=>0,
+                        'postDataCommentCount'=>0,
+                        'postDataLikeCount'=>0,
+                        'postDataDisLikeCount'=>0,
+                        'comments'=>0,
+                        'object_postUserId'=>0,
+                        'path'=>0,
+                        'ipad_thmubnail'=>0,
+                        'android_thmubnail'=>0,
+                        'like_users'=>0,
+                        'dislike_users'=>0,
+                        'updated_at'=>0,
+                        'postUserinfo'=>0,
+                        'tags'=>0
                     ]
                 ],
-                [
-                    '$unwind' => '$user_info'
+                 [ 
+                    '$group' => [ 
+                        '_id' => [
+                            'media_id'=>'$_id',
+                            'user_id_group'=>'$user_id',
+                        ],
+                        'postUserId'=>[
+                            '$first'=>'$postUserId'
+                        ],
+                        'user_id'=>[
+                            '$first'=>'$user_id'
+                        ],
+                        'PostDataThumbnail'=>[
+                            '$first'=>'$iphone_thmubnail'
+                        ],
+                        'profile_pic_thumbnail'=>[
+                            '$first'=> '$profile_pic_thumbnail'
+                        ],
+                        'username'=>[
+                            '$first'=>'$username'
+                        ],
+                        '_postDataID'=>[
+                            '$first'=>'$_id'
+                        ],
+                         'created_at'=>[
+                            '$first'=>'$created_at'
+                        ],
+                        'like_state'=>[
+                            '$sum'=>['$cond'=> [
+                            [ '$eq'=> [ '$type', 'like' ] ],
+                            1,
+                            0
+                        ]]
+                        ],
+                        'comments'=> [ '$push'=> '$$ROOT' ] ] 
+                    
                 ],
                 [
-                    '$project' => [
-                        'user_id'=>'$_id',
-                        'username'=>'$user_info.username',
-                        'profile_pic'=>'$user_info.profile_pic_url',
-                        'profile_pic_thumbnail'=>'$user_info.profile_pic_thumbnail',
-                        'postDatacount' => '$user_info.postDatacount',
-                
+                    '$addFields'=>[
+                        'likestate'=>['$cond'=> [
+                            [ '$eq'=> [ '$like_state', 0 ] ],
+                            false,
+                            true
+                        ]],
+                        'postDataID'=>['$toString'=>'$_postDataID'],
+                        'dateDiff'=>['$divide' => [['$subtract'=>[$now , '$created_at']], 3600000]]
+                     ]
+                ],
+                [
+                    '$project'=>[
+                        'comments.user_id'=>0,
+                        'comments.postUserId'=>0,
+                        'comments.iphone_thumbnail'=>0,
+                        'comments.profile_pic_thumbnail'=>0,
+                        'comments.username'=>0,
+                        'comments.postDataID'=>0,
+                        'comments.created'=>0,
+                        'comments.created_at'=>0,
+                        'comments._id'=>0,
+                        'comments.iphone_thmubnail'=>0,
+                        'comments.postdatalikecomment'=>0,
+                        'comments.status'=>0,
+                        'like_state'=>0,
+                        'postUserId'=>0,
+                        '_postDataID'=>0,
+                        '_id'=>0
+                       
                     ]
-                ]
-                
-                
+                ],
+   
             ]);
         })->toArray();
         if(!empty($data))
         {
             $send_data = array(
                 'action' => 'true',
-                'result' => $data
+                'data' => $data
             );
         }
         else{
             $send_data = array(
                 'action' => 'false',
-                'result' => 'no result'
+                'data' => 'no result'
             );
         }
         return response()->json($send_data);

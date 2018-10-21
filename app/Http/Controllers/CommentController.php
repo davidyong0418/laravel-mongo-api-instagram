@@ -12,6 +12,8 @@ use App\Model\Post;
 use Illuminate\Database\Eloquent\Collection;
 use App\Model\CommentId;
 use MongoDB\BSON\ObjectID;
+use MongoDB\BSON\UTCDateTime;
+use DateTime;
 class CommentController extends Controller
 {
     // api/get_following?user_id=
@@ -131,10 +133,14 @@ class CommentController extends Controller
                 'uid' => new ObjectID($uid),
                 'comment' => $comment,
                 'comment_date' => $today));
+            $postdatalikecomment_date = new UTCDateTime(new DateTime($today));
             Media::where('_id', $media_id)->push('postdatalikecomment', array(
                     'uid' => $uid,
                     'object_uid'=>new ObjectID($uid) ,
-                    'type' => 'comment'));
+                    'type' => 'comment',
+                    'created_at'=> $postdatalikecomment_date,
+                    'comment'=>$comment
+                ));
             Media::where('_id', $media_id)->update($update_info,['upsert' => true]);
             $media = new Media();
             $media->update_post($media_id, 'comment', $comment, $uid);
