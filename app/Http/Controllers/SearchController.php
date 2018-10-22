@@ -24,7 +24,6 @@ class SearchController extends Controller
             }else{
                 $search_pattern = '%'.$search_text.'%';
                 $users = User::where('username', 'LIKE', $search_pattern)->where('_id', '!=', $user_id)->orderBy($orderby,'desc')->take(50)->get();
-                return $search_pattern;
                 if(!empty($users)){
                     $data = array(
                         'action'=>'true',
@@ -127,6 +126,7 @@ class SearchController extends Controller
                 
             ]);
         })->toArray();
+
         if(!empty($data))
         {
             $data = array(

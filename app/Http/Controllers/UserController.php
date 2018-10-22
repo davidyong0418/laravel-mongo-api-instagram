@@ -85,15 +85,15 @@ class UserController extends Controller
                 $data_info['first_name'] = $first_name;
                 $data_info['last_name'] = $last_name;
                 $user = new User();
-                $expire_date = date('Y-m-d H:i:s', strtotime(date('Y-m-d H:i:s'). ' + 3 minutes'));
+                $expire_date = date('Y-m-d', strtotime(date('Y-m-d'). ' + 7 days'));
                 $user->expire_date = $expire_date;
                 $user->first_name = $first_name;
                 $user->last_name = $last_name;
                 $user->username = $username;
                 $user->email = $email;       
                 $user->password = $password;
-                $user->profile_pic_url = 'https://www.sparklabs.com/forum/styles/comboot/theme/images/default_avatar.jpg';
-                $user->profile_pic_thumbnail = 'https://www.sparklabs.com/forum/styles/comboot/theme/images/default_avatar.jpg';
+                $user->profile_pic_url = 'https://necked-app.s3.amazonaws.com/necked/image/original/5b7511dc79c8331fc0001934/necked_1537765178';
+                $user->profile_pic_thumbnail = 'https://necked-app.s3.amazonaws.com/necked/image/original/5b7511dc79c8331fc0001934/necked_1537765178';
                 $user->_token = $_token;
                 $user->confirmed = 0;
                 $user->confirm_str = $data_info['confirmation'];
@@ -130,7 +130,7 @@ class UserController extends Controller
             return $data;
             }
         }
-        else if ($type == 'phone')
+        else if($type == 'phone')
         {
             $check_username = User::where('username', '=', $username)->get()->toArray();
             $check_phonenumber = User::where('phone_number', '=', $phone_number)->get()->toArray();
@@ -161,15 +161,15 @@ class UserController extends Controller
                 $data_info['first_name'] = $first_name;
                 $data_info['last_name'] = $last_name;
                 $user = new User();
-                $expire_date = date('Y-m-d', strtotime(date('Y-m-d'). ' + 15 days'));
+                $expire_date = date('Y-m-d', strtotime(date('Y-m-d'). ' + 7 days'));
                 $user->expire_date = $expire_date;
                 $user->first_name = $first_name;
                 $user->last_name = $last_name;
                 $user->username = $username;
                 $user->email = $email;       
                 $user->password = $password;
-                $user->profile_pic_url = 'https://www.sparklabs.com/forum/styles/comboot/theme/images/default_avatar.jpg';
-                $user->profile_pic_thumbnail = 'https://www.sparklabs.com/forum/styles/comboot/theme/images/default_avatar.jpg';
+                $user->profile_pic_url = 'https://necked-app.s3.amazonaws.com/necked/image/original/5b7511dc79c8331fc0001934/necked_1537765178';
+                $user->profile_pic_thumbnail = 'https://necked-app.s3.amazonaws.com/necked/image/original/5b7511dc79c8331fc0001934/necked_1537765178';
                 $user->_token = $_token;
                 $user->phone_number = $phone_number;
                 $user->confirmed = 0;
@@ -234,8 +234,8 @@ class UserController extends Controller
                 $user->username = $username;
                 $user->email = $email;       
                 $user->password = $password;
-                $user->profile_pic_url = 'https://www.sparklabs.com/forum/styles/comboot/theme/images/default_avatar.jpg';
-                $user->profile_pic_thumbnail = 'https://www.sparklabs.com/forum/styles/comboot/theme/images/default_avatar.jpg';
+                $user->profile_pic_url = 'https://necked-app.s3.amazonaws.com/necked/image/original/5b7511dc79c8331fc0001934/necked_1537765178';
+                $user->profile_pic_thumbnail = 'https://necked-app.s3.amazonaws.com/necked/image/original/5b7511dc79c8331fc0001934/necked_1537765178';
                 $user->_token = $_token;
                 $user->confirmed = 1;
                 $user->confirm_str = $data_info['confirmation'];
@@ -529,8 +529,9 @@ class UserController extends Controller
                                 'postDataiphonethumbnail'=>'$iphone_thmubnail',
                                 'postDataipadthumbnail'=>'$ipad_thmubnail',
                                 'postDataandroidthumbnail'=>'$android_thmubnail',
-                                'postDataCategory'=>'$category', 
-                                'created_at' => 1
+                                'postDataCategory'=>'$category',
+                                'created_at' => 1,
+                                'postDataContent' => 1,
                         ]
                     ],
                      [
@@ -569,7 +570,8 @@ class UserController extends Controller
                                 'postDataipadthumbnail'=>'$ipad_thmubnail',
                                 'postDataandroidthumbnail'=>'$android_thmubnail',
                                 'postDataCategory'=>'$category', 
-                                'created_at' => 1
+                                'created_at' => 1,
+                                'postDataContent' => 1,
                         ]
                     ],
                      [
@@ -662,7 +664,7 @@ class UserController extends Controller
                 );
             }
             else{
-            	$update_date = date('Y-m-d H:i:s', strtotime(date('Y-m-d H:i:s'). ' + 3 minutes'));
+            	$update_date = date('Y-m-d', strtotime(date('Y-m-d'). ' + 7 days'));
             	$update_data = array(
                     'expire_date' => $update_date
                 );
@@ -917,8 +919,7 @@ class UserController extends Controller
         else{
             $object_id = new ObjectID($media_id);
             Media::raw()->findOneAndUpdate(['_id'=> $object_id], ['$pull'=> ['like_users'=> ['uid'=> $uid]]]);
-            Media::raw()->findOneAndUpdate(['_id'=> $object_id], ['$pull'=> ['postdatalikecomment'=> ['uid'=> $uid, 'type'=>'like','object_uid' => new ObjectID($uid), 
-            'comment'=>'']]]);
+            Media::raw()->findOneAndUpdate(['_id'=> $object_id], ['$pull'=> ['postdatalikecomment'=> ['uid'=> $uid, 'type'=>'like','object_uid' => new ObjectID($uid),  'comment'=>'']]]);
             $Media->update_post($media_id, 'unlike');
         }
         $data = array(
@@ -953,7 +954,22 @@ class UserController extends Controller
     }
    
     // api/facebook_login?user_id=&password=&email=
-   
+    public function facebook_login(Request $request)
+    {
+        $uid = $request->get('user_id');
+        $facebook_password = $request->get('password');
+        $facebook_email = $request->get('email');
+        $user = User::find($uid);
+        $user->facebook_password = $facebook_password;
+        $user->facebook_email =$facebook_email;
+        $user->save();
+        $data = array(
+            'action' =>'true',
+            'result'=>$user->toArray()
+        );
+        return $data;
+
+    }
     
     public function register_confirm(Request $request)
     {
@@ -993,7 +1009,7 @@ class UserController extends Controller
                     ]],
                     [
                         '$match' => [
-                            'status' => 1
+                            'status' => 2
                         ]
                     ],
                     [
@@ -1086,7 +1102,7 @@ class UserController extends Controller
                             'created_at' => [
                                 '$lt' => $date
                                 ],
-                            'status' => 1
+                            'status' => 2
                         ]
                     ],
                     [
@@ -1127,10 +1143,9 @@ class UserController extends Controller
                                         ]
                                 ],
                                 'result'=>[
-                                    '$filter' => [
-                                        'input'=>'$like_users',
+                                    '$filter' => ['input'=>'$like_users',
                                     'as' => 'user_item',
-                                    'cond' => [ '$eq'=> [ '$$usre_item.uid', $uid ] ]
+                                    'cond' => [ '$eq'=> [ '$$user_item.uid', $uid ] ]
                                     ]
                                 ]
                         ]
@@ -1157,6 +1172,9 @@ class UserController extends Controller
                         '$addFields' => [
                             'postUserFollowingCount' => '$postUserinfo.following_count',
                         ]
+                    ],
+                    [
+                        '$unwind' => '$result'
                     ],
                     [ '$limit' => 9 ]
                 ]);
@@ -1335,9 +1353,11 @@ class UserController extends Controller
         })->toArray();
         if(!empty($data))
         {
+        	$feed_data = array();
+        	$feed_data['children'] = $data;
             $send_data = array(
                 'action' => 'true',
-                'data' => $data
+                'data' => $feed_data
             );
         }
         else{
@@ -1356,14 +1376,14 @@ class UserController extends Controller
         if(!empty($token_result) && $token_result[0]['confirmed'] == 1)
         {
             $expire_date = strtotime($token_result[0]['expire_date']);
-            $today = strtotime(date('Y-m-d H:i:s'));
+            $today = strtotime(date('Y-m-d'));
             if($expire_date >= $today)
             {
                 $data = array(
                     'action' => 'true',
                     'result' => $token_result
                 );
-                $expire_date = date('Y-m-d H:i:s', strtotime(date('Y-m-d H:i:s'). ' + 3 minutes'));
+                $expire_date = date('Y-m-d', strtotime(date('Y-m-d'). ' + 7 days'));
                 $update_data = array(
                     'expire_date' => $expire_date
                 );
@@ -1384,24 +1404,5 @@ class UserController extends Controller
         }
         return $data;
     }
-    public function facebook_login(Request $request)
-    {
-        $uid = $request->get('user_id');
-        $facebook_password = $request->get('password');
-        $facebook_email = $request->get('email');
-        $user = User::find($uid);
-        $user->facebook_password = $facebook_password;
-        $user->facebook_email =$facebook_email;
-        $user->save();
-        $data = array(
-            'action' =>'true',
-            'result'=>$user->toArray()
-        );
-        return $data;
 
-    }
-    public function facebook_register(Request $request)
-    {
-        $uid = $request->get('user_id');
-    }
 }

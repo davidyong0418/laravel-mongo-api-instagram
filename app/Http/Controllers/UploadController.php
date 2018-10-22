@@ -16,16 +16,11 @@ use PHPMailer\PHPMailer\Exception;
 use FFMpeg\FFMpeg;
 use App\Model\Post;
 use MongoDB\BSON\ObjectID;
+use DB;
 class UploadController extends Controller
 {
-    public function save_media_s3($file, $uid, $type,$device, $path = NULL){
-        if($device == 'original')
-        {
-            $media_path = 'necked'. '/'.$type.'/'.$device.'/'. $uid. '/necked_'. time();
-        }
-        else{
-            $media_path = 'necked'. '/'.$type.'/'.$device.'/'. $uid. '/necked_'. time();
-        }
+    public function save_media_s3($file, $type){
+        $media_path = 'necked'. '/'.$type.'/'.$file;
         $file_content = file_get_contents($file);
         // $filepath = Storage::disk('s3')->put($media_path, file_get_contents($file),'public');
         $filepath = Storage::disk('s3')->put($media_path,$file_content,'public');
@@ -33,108 +28,6 @@ class UploadController extends Controller
         return $saved_media_path;
     }
     // api/upload_image?upload_file=&user_id=
-    /*public function upload_media(Request $request)
-    {
-        
-        ini_set('max_execution_time', 300);
-        $uid = $request->get('user_id');
-        $type = $request->get('type');
-        $category_id = $request->get('category');
-        $caption = $request->get('caption');
-        $all_request = $request->all();
-        $upload_file = $all_request['upload_file'];
-        $path = $upload_file->getClientOriginalExtension();
-        $uploaddir = 'upload/original.'.$path;
-        move_uploaded_file($upload_file, $uploaddir);
-        $image_size = getimagesize($uploaddir);
-        $image_width = $image_size[0];
-        $image_height = $image_size[1];
-        
-
-        if($type == 'image')
-        {
-            if($path == 'jpg'){
-                if($image_width < 400)
-                {
-                    copy($uploaddir, 'upload/output_iphone.'.$path);
-                    $query_ipad = 'ffmpeg -i '.$uploaddir.' -vf scale="1024:-1" upload/output_ipad.jpg';
-                    $query_android = 'ffmpeg -i '.$uploaddir.' -vf scale="1920:-1" upload/output_android.jpg';
-                    $query= $query_ipad." && ".$query_android;
-                }
-                else if($image_width > 400 && $image_width < 1024){
-                    $query_iphone = 'ffmpeg -i '.$uploaddir.' -vf scale="400:-1" upload/output_iphone.jpg';
-                    copy($uploaddir, 'upload/output_ipad.'.$path);
-                    $query_android = 'ffmpeg -i '.$uploaddir.' -vf scale="1920:-1" upload/output_android.jpg';
-                    $query= $query_iphone." && ".$query_android;
-                }
-                else if($image_width > 1024 && $image_width < 1920)
-                {
-                    $query_iphone = 'ffmpeg -i '.$uploaddir.' -vf scale="400:-1" upload/output_iphone.jpg';
-                    $query_ipad = 'ffmpeg -i '.$uploaddir.' -vf scale="1024:-1" upload/output_ipad.jpg';
-                    copy($uploaddir, 'upload/output_android.'.$path);
-                    $query= $query_iphone." && ".$query_ipad;
-                }
-                else if($image_width > 1920)
-                {
-                    $query_iphone = 'ffmpeg -i '.$uploaddir.' -vf scale="400:-1" upload/output_iphone.jpg';
-                    $query_ipad = 'ffmpeg -i '.$uploaddir.' -vf scale="1024:-1" upload/output_ipad.jpg';
-                    $query_android = 'ffmpeg -i '.$uploaddir.' -vf scale="1920:-1" upload/output_android.jpg';
-                    $query= $query_iphone." && ".$query_ipad." && ".$query_android;
-                }
-            }
-            else
-            {
-                    $query_iphone = 'ffmpeg -i '.$uploaddir.' -vf scale="400:-1" upload/output_iphone.jpg';
-                    $query_ipad = 'ffmpeg -i '.$uploaddir.' -vf scale="1024:-1" upload/output_ipad.jpg';
-                    $query_android = 'ffmpeg -i '.$uploaddir.' -vf scale="1920:-1" upload/output_android.jpg';
-                    $query= $query_iphone." && ".$query_ipad." && ".$query_android;
-            }
-
-
-
-            // 375:80 1024:1366 1920:1080
-        }
-        else{
-            
-
-            if($path == 'mp4')
-            {
-                $convert_video_path = $uploaddir;
-                $query_iphone = 'ffmpeg -i '.$convert_video_path.' -vframes 1 -filter:v scale="400:-1" upload/output_iphone.jpg';
-                $query_ipad = 'ffmpeg -i '.$convert_video_path.' -vframes 1 -filter:v scale="1024:-1" upload/output_ipad.jpg';
-                $query_android = 'ffmpeg -i '.$convert_video_path.' -vframes 1 -filter:v scale="1920:-1" upload/output_android.jpg';
-                $query= $query_iphone." && ".$query_ipad." && ".$query_android;
-            }
-            else{
-                $convert_video_path = 'upload/converted_video.mp4';
-                $convert_ext = 'ffmpeg -i '.$uploaddir.' -acodec libmp3lame -ar 44100 '.$convert_video_path;
-                $query_iphone = 'ffmpeg -i '.$convert_video_path.' -vframes 1 -filter:v scale="400:-1" upload/output_iphone.jpg';
-                $query_ipad = 'ffmpeg -i '.$convert_video_path.' -vframes 1 -filter:v scale="1024:-1" upload/output_ipad.jpg';
-                $query_android = 'ffmpeg -i '.$convert_video_path.' -vframes 1 -filter:v scale="1920:-1" upload/output_android.jpg';
-                $query= $convert_ext." && ".$query_iphone." && ".$query_ipad." && ".$query_android;
-            }
-           
-        }
-        shell_exec($query);
-        if($type == 'video')
-        {
-            $media_original_path = $this->save_media_s3($convert_video_path,$uid,$type,'original',$path);
-        }
-        else
-        {
-            $media_original_path = $this->save_media_s3($uploaddir,$uid,$type,'original',$path);
-        }
-        $media_iphone_path = $this->save_media_s3('upload/output_iphone.jpg',$uid,$type,'iphone');
-        $media_ipad_path = $this->save_media_s3('upload/output_ipad.jpg',$uid,$type,'ipad');
-        $media_android_path = $this->save_media_s3('upload/output_android.jpg',$uid,$type,'android');
-        $save_result = $this->save_media_db($uid,$type,$media_original_path,$media_iphone_path,$media_ipad_path,$media_android_path,$category_id,$caption);
-        array_map('unlink', glob("upload/*"));
-        $data = array(
-            'action'=>'true',
-            'result' =>$save_result,
-        );
-        return response()->json($data);
-    }*/
     public function upload_media(Request $request)
     {
         
@@ -145,60 +38,65 @@ class UploadController extends Controller
         $caption = $request->get('caption');
         $all_request = $request->all();
         $upload_file = $all_request['upload_file'];
+
         $path = $upload_file->getClientOriginalExtension();
         $uploaddir = 'upload/original.'.$path;
         move_uploaded_file($upload_file, $uploaddir);
         $image_size = getimagesize($uploaddir);
         $image_width = $image_size[0];
         $image_height = $image_size[1];
-        
 
         if($type == 'image')
         {
-            $query = 'ffmpeg -i '.$uploaddir.' -vf scale="400:-1" upload/output_iphone.jpg';
-            // 375:80 1024:1366 1920:1080
+            $thumbnail_small = 'output_small_'.uniqid().'.jpg';
+            $thumbnail_large = 'output_large_'.uniqid().'.jpg';
+            $thumbnail_origin = $thumbnail_small;
+            $query_iphone = 'ffmpeg -i '.$uploaddir.' -vf scale="400:-1" upload/'.$thumbnail_small;
+            $query_ipad = 'ffmpeg -i '.$uploaddir.' -vf scale="1024:-1" upload/'.$thumbnail_large;
+            $query= $query_iphone." && ".$query_ipad;
         }
         else{
-            if($path == 'mp4')
-            {
-                $convert_video_path = $uploaddir;
-                $query_iphone = 'ffmpeg -i '.$convert_video_path.' -vframes 1 -filter:v scale="400:-1" upload/output_iphone.jpg';
-                $query_ipad = 'ffmpeg -i '.$convert_video_path.' -vframes 1 -filter:v scale="1024:-1" upload/output_ipad.jpg';
-                $query_android = 'ffmpeg -i '.$convert_video_path.' -vframes 1 -filter:v scale="1920:-1" upload/output_android.jpg';
-                $query= $query_iphone." && ".$query_ipad." && ".$query_android;
-            }
-            else{
-                $convert_video_path = 'upload/converted_video.mp4';
-                $convert_ext = 'ffmpeg -i '.$uploaddir.' -acodec libmp3lame -ar 44100 '.$convert_video_path;
-                $query_iphone = 'ffmpeg -i '.$convert_video_path.' -vframes 1 -filter:v scale="400:-1" upload/output_iphone.jpg';
-                $query_ipad = 'ffmpeg -i '.$convert_video_path.' -vframes 1 -filter:v scale="1024:-1" upload/output_ipad.jpg';
-                $query_android = 'ffmpeg -i '.$convert_video_path.' -vframes 1 -filter:v scale="1920:-1" upload/output_android.jpg';
-                $query= $convert_ext." && ".$query_iphone." && ".$query_ipad." && ".$query_android;
-            }
+            $thumbnail_small = 'output_small_'.uniqid().'.jpg';
+            $thumbnail_large = 'output_large_'.uniqid().'.jpg';
+            $thumbnail_origin = 'output_origin_'.uniqid().'.mov';
+            $convert_ext = 'ffmpeg -i '.$uploaddir.' -acodec copy -vcodec copy -f mov upload/'.$thumbnail_origin;
+            $query_iphone = 'ffmpeg -i '.$uploaddir.' -vframes 1 -filter:v scale="400:-1" upload/'.$thumbnail_small;
+            $query_ipad = 'ffmpeg -i '.$uploaddir.' -vframes 1 -filter:v scale="1024:-1" upload/'.$thumbnail_large;
+            $query= $convert_ext." && ".$query_iphone." && ".$query_ipad;
            
         }
         shell_exec($query);
-        if($type == 'video')
-        {
-            $media_original_path = $this->save_media_s3($convert_video_path,$uid,$type,'original',$path);
-        }
-        else
-        {
-            $media_original_path = $this->save_media_s3($uploaddir,$uid,$type,'original',$path);
-        }
-        $media_iphone_path = $this->save_media_s3('upload/output_iphone.jpg',$uid,$type,'iphone');
-        $media_ipad_path = '';
-        $media_android_path = '';
-        $save_result = $this->save_media_db($uid,$type,$media_original_path,$media_iphone_path,$media_ipad_path,$media_android_path,$category_id,$caption);
-        array_map('unlink', glob("upload/*"));
+        // if($type == 'video')
+        // {
+        //     $media_original_path = $this->save_media_s3($convert_video_path,$uid,$type,'original',$path);
+        // }
+        // else
+        // {
+        //     $media_original_path = $this->save_media_s3($uploaddir,$uid,$type,'original',$path);
+        // }
+        // $media_iphone_path = $this->save_media_s3('upload/output_iphone.jpg',$uid,$type,'iphone');
+        // $media_ipad_path = $this->save_media_s3('upload/output_ipad.jpg',$uid,$type,'ipad');
+        // $media_android_path = $this->save_media_s3('upload/output_android.jpg',$uid,$type,'android');
+        array_map('unlink', glob("upload/original*"));
+        $save_result = $this->save_media_db($uid,$type,$thumbnail_origin, $thumbnail_small,$thumbnail_large,$category_id,$caption);
+
         $data = array(
             'action'=>'true',
             'result' =>$save_result,
         );
         return response()->json($data);
     }
-    public function save_media_db($uid, $type, $media_original_path,$media_iphone_path,$media_ipad_path,$media_android_path, $category_id, $caption)
+    public function get_base_url()
     {
+        $hostName = $_SERVER['HTTP_HOST']; 
+        // output: http://
+        $protocol = strtolower(substr($_SERVER["SERVER_PROTOCOL"],0,5))=='https://'?'https://':'http://';
+        // return: http://localhost/myproject/
+        return $protocol.$hostName."/upload/";
+    }
+    public function save_media_db($uid, $type, $media_original_path, $thumbnail_small,$thumbnail_large, $category_id, $caption)
+    {
+        $base_url = $this->get_base_url();
         $follow_count = Following::where('uid', $uid)->where('denyorrejectoption', true)->count();
         $today = date('Y-m-d h:i:s');
         $new = array();
@@ -212,10 +110,10 @@ class UploadController extends Controller
         $media->object_postUserId = $object_postUserId;
         $media->follow_count = $follow_count;
         $media->type = $type;
-        $media->path = $media_original_path;
-        $media->iphone_thmubnail = $media_iphone_path;
-        $media->ipad_thmubnail = $media_ipad_path;
-        $media->android_thmubnail = $media_android_path;
+        $media->path = $base_url.$media_original_path;
+        $media->iphone_thmubnail = $base_url.$thumbnail_small;
+        $media->ipad_thmubnail = $base_url.$thumbnail_large;
+        // $media->android_thmubnail = $media_android_path;
         $media->category = $category_id;
         $media->postDataCaption = $caption;
         $media->postDataLastCommentUserID = $uid;
@@ -230,6 +128,7 @@ class UploadController extends Controller
         $media->postdatalikecomment = array();
         $media->tags = array();
         $media->status = 1;
+        $media->upload_complete = false;
         $media->save();
         $this->increase_user_post_count($uid);
         return $media->toArray();
@@ -237,6 +136,7 @@ class UploadController extends Controller
     // api/upload_text
     public function upload_text(Request $request)
     {
+        
         $uid = $request->get('user_id');
         $category = $request->get('category');
         $caption = $request->get('caption');
@@ -248,14 +148,15 @@ class UploadController extends Controller
         $media->follow_count = '';
         $media->type = 'text';
         $media->path = '';
-        $media->thumbnail = '';
+        $media->iphone_thmubnail = '';
+        $media->ipad_thmubnail = '';
         $media->category = $category;
         $media->postDataCaption = $caption;
         $media->postDataContent = $content;
         $media->postDataLastCommentUserID = $uid;
         $media->postDataLastCommentText='';
         $media->postDataShareCount = 0;
-        $media->postDataCommentCount = 0;
+        $media->postDataCommentCount = 1;
         $media->postDataLikeCount = 0;
         $media->postDataDisLikeCount = 0;
         $media->comments = array();
@@ -309,5 +210,40 @@ class UploadController extends Controller
         else{
             User::where('_id', $uid)->increment('postDatacount', 1);
         }
+    }
+    // cron job
+    public function upload_media_s3()
+    {
+        $files = Media::where('upload_complete', false)->get()->toArray();
+        foreach ($files as $file)
+        {
+            $origin = $file['path'];
+            $small = $file['iphone_thmubnail'];
+            $large = $file['ipad_thmubnail'];
+            $type = $file['type'];
+            $origin_media_path = substr($origin, strpos($origin, "upload"));
+            $small_media_path = substr($small, strpos($small, "upload"));    
+            $large_media_path = substr($large, strpos($large, "upload"));
+
+            $s3_origin_path = $this->save_media_s3($origin_media_path,$type);
+            $s3_small_path = $this->save_media_s3($small_media_path,$type);
+            $s3_large_path = $this->save_media_s3($large_media_path,$type);
+
+            $update_data = array(
+                'path' => $s3_origin_path,
+                'iphone_thmubnail' => $s3_small_path,
+                'ipad_thmubnail' => $s3_large_path,
+                'upload_complete' => true
+            );
+            DB::collection('Media')->where('path', $origin)->update($update_data);
+            array_map('unlink', glob($origin_media_path));
+            array_map('unlink', glob($small_media_path));
+            array_map('unlink', glob($large_media_path));
+        }
+        
+    }
+    public function set_cronjob()
+    {
+        $this->upload_media_s3();
     }
 }
