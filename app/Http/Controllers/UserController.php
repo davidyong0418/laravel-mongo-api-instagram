@@ -100,6 +100,7 @@ class UserController extends Controller
                 $user->following_count = 0;
                 $user->postDatacount = 0;
                 $user->followers_count = 0;
+                $user->upload_complete = true;
                 $user->save();
                 $fullname = $first_name." ".$last_name;
                 $m = new SimpleEmailServiceMessage();
@@ -177,6 +178,7 @@ class UserController extends Controller
                 $user->following_count = 0;
                 $user->postDatacount = 0;
                 $user->followers_count = 0;
+                $user->upload_complete = true;
                 $user->save();
             $this->sendMessage($phone_number,$data_info['confirmation']);                    
 
@@ -242,6 +244,7 @@ class UserController extends Controller
                 $user->following_count = 0;
                 $user->postDatacount = 0;
                 $user->followers_count = 0;
+                $user->upload_complete = true;
                 $user->save();
                 $data = array(
                     'action' =>'true',
